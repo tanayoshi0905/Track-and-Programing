@@ -1,0 +1,24 @@
+// ============================================================
+// Firebase Admin SDK — サーバーサイド専用シングルトン
+// ============================================================
+
+import { initializeApp, cert, getApps, type App } from "firebase-admin/app";
+import { getFirestore, type Firestore } from "firebase-admin/firestore";
+import { readFileSync } from "fs";
+import { resolve } from "path";
+
+function getOrInitApp(): App {
+  if (getApps().length > 0) {
+    return getApps()[0];
+  }
+
+  const credPath =
+    process.env.GOOGLE_APPLICATION_CREDENTIALS ?? "";
+  const absPath = resolve(process.cwd(), credPath);
+
+  const serviceAccount = JSON.parse(readFileSync(absPath, "utf-8"));
+  return initializeApp({ credential: cert(serviceAccount) });
+}
+
+const app = getOrInitApp();
+export const db: Firestore = getFirestore(app);
