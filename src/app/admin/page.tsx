@@ -6,6 +6,8 @@
 import { fetchEvent, fetchLocations, fetchNotices } from "@/lib/actions";
 import AdminDashboard from "./admin-dashboard";
 
+export const dynamic = "force-dynamic";
+
 export default async function AdminPage() {
   const [event, locations, notices] = await Promise.all([
     fetchEvent(),
