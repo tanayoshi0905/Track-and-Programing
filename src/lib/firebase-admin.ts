@@ -31,5 +31,17 @@ function getOrInitApp(): App {
   }
 }
 
-const app = getOrInitApp();
-export const db: Firestore = getFirestore(app);
+let firestoreInstance: Firestore | null = null;
+
+export const db: Firestore = new Proxy({} as Firestore, {
+  get(_target, prop) {
+    if (!firestoreInstance) {
+      firestoreInstance = getFirestore(getOrInitApp());
+    }
+    const value = (firestoreInstance as any)[prop];
+    if (typeof value === "function") {
+      return value.bind(firestoreInstance);
+    }
+    return value;
+  },
+});
