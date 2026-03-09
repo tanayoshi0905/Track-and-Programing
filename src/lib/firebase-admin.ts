@@ -12,12 +12,23 @@ function getOrInitApp(): App {
     return getApps()[0];
   }
 
-  const credPath =
-    process.env.GOOGLE_APPLICATION_CREDENTIALS ?? "";
+  const credPath = process.env.GOOGLE_APPLICATION_CREDENTIALS;
+  if (!credPath) {
+    throw new Error(
+      "GOOGLE_APPLICATION_CREDENTIALS is not set or is empty. Please check your .env.local file."
+    );
+  }
+
   const absPath = resolve(process.cwd(), credPath);
 
-  const serviceAccount = JSON.parse(readFileSync(absPath, "utf-8"));
-  return initializeApp({ credential: cert(serviceAccount) });
+  try {
+    const serviceAccount = JSON.parse(readFileSync(absPath, "utf-8"));
+    return initializeApp({ credential: cert(serviceAccount) });
+  } catch (error: any) {
+    throw new Error(
+      `Failed to initialize Firebase Admin SDK. Error reading or parsing credentials file at ${absPath}: ${error.message}`
+    );
+  }
 }
 
 const app = getOrInitApp();
