@@ -1,44 +1,79 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import type { Announcement } from "@/lib/data";
+import { collection, query, where, onSnapshot, Timestamp } from "firebase/firestore";
+import { clientDb } from "@/lib/firebase-client";
+import type { Announcement, AnnouncementType } from "@/lib/data";
+
+const validTypes: AnnouncementType[] = ["重要", "変更", "案内"];
+
+function toAnnouncementType(raw: string | undefined): AnnouncementType {
+  if (raw && validTypes.includes(raw as AnnouncementType)) {
+    return raw as AnnouncementType;
+  }
+  return "案内";
+}
+
+function formatTimestamp(raw: unknown): string {
+  if (!raw) return "";
+  if (raw instanceof Timestamp) {
+    return raw.toDate().toLocaleString("ja-JP", { timeZone: "Asia/Tokyo" });
+  }
+  if (typeof raw === "string") return raw;
+  return String(raw);
+}
 
 interface UseAnnouncementsResult {
   announcements: Announcement[];
   loading: boolean;
   error: string | null;
+  lastUpdated: Date | null;
 }
 
-export function useAnnouncements(): UseAnnouncementsResult {
+export function useAnnouncements(eventId: string | null): UseAnnouncementsResult {
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
   useEffect(() => {
-    let cancelled = false;
-
-    async function fetchAnnouncements() {
-      try {
-        const res = await fetch("/api/announcements");
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const data: Announcement[] = await res.json();
-        if (!cancelled) {
-          setAnnouncements(data);
-          setError(null);
-        }
-      } catch (err) {
-        if (!cancelled) {
-          console.error("お知らせの取得に失敗:", err);
-          setError("お知らせの読み込みに失敗しました");
-        }
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
+    if (!eventId) {
+      setLoading(false);
+      return;
     }
 
-    fetchAnnouncements();
-    return () => { cancelled = true; };
-  }, []);
+    const q = query(
+      collection(clientDb, "notices"),
+      where("eventId", "==", eventId),
+    );
 
-  return { announcements, loading, error };
+    const unsubscribe = onSnapshot(
+      q,
+      (snapshot) => {
+        const anns: Announcement[] = snapshot.docs.map((doc) => {
+          const d = doc.data();
+          return {
+            id: doc.id,
+            type: toAnnouncementType(d.type),
+            title: d.title ?? "",
+            body: d.body ?? "",
+            timestamp: formatTimestamp(d.createdAt),
+          };
+        });
+        setAnnouncements(anns);
+        setLastUpdated(new Date());
+        setError(null);
+        setLoading(false);
+      },
+      (err) => {
+        console.error("Firestore notices リアルタイム監視エラー:", err);
+        setError("お知らせの読み込みに失敗しました");
+        setLoading(false);
+      },
+    );
+
+    return () => unsubscribe();
+  }, [eventId]);
+
+  return { announcements, loading, error, lastUpdated };
 }
