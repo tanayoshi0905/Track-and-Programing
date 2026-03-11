@@ -1,26 +1,47 @@
 // ============================================================
-// Firebase Admin SDK 初期化 (サーバーサイド専用)
+// Firebase Admin SDK — サーバーサイド専用シングルトン
 // ============================================================
 
-import { initializeApp, cert, getApps, type ServiceAccount } from "firebase-admin/app";
-import { getFirestore } from "firebase-admin/firestore";
+import { initializeApp, cert, getApps, type App } from "firebase-admin/app";
+import { getFirestore, type Firestore } from "firebase-admin/firestore";
 import { readFileSync } from "fs";
 import { resolve } from "path";
 
-function getServiceAccount(): ServiceAccount {
-  const envPath = process.env.FIREBASE_SERVICE_ACCOUNT_PATH;
-  if (!envPath) {
+function getOrInitApp(): App {
+  if (getApps().length > 0) {
+    return getApps()[0];
+  }
+
+  const credPath = process.env.GOOGLE_APPLICATION_CREDENTIALS;
+  if (!credPath) {
     throw new Error(
-      "FIREBASE_SERVICE_ACCOUNT_PATH が設定されていません。.env.local を確認してください。"
+      "GOOGLE_APPLICATION_CREDENTIALS is not set or is empty. Please check your .env.local file."
     );
   }
-  const absPath = resolve(process.cwd(), envPath);
-  const json = JSON.parse(readFileSync(absPath, "utf-8"));
-  return json as ServiceAccount;
+
+  const absPath = resolve(process.cwd(), credPath);
+
+  try {
+    const serviceAccount = JSON.parse(readFileSync(absPath, "utf-8"));
+    return initializeApp({ credential: cert(serviceAccount) });
+  } catch (error: any) {
+    throw new Error(
+      `Failed to initialize Firebase Admin SDK. Error reading or parsing credentials file at ${absPath}: ${error.message}`
+    );
+  }
 }
 
-if (getApps().length === 0) {
-  initializeApp({ credential: cert(getServiceAccount()) });
-}
+let firestoreInstance: Firestore | null = null;
 
-export const db = getFirestore();
+export const db: Firestore = new Proxy({} as Firestore, {
+  get(_target, prop) {
+    if (!firestoreInstance) {
+      firestoreInstance = getFirestore(getOrInitApp());
+    }
+    const value = (firestoreInstance as any)[prop];
+    if (typeof value === "function") {
+      return value.bind(firestoreInstance);
+    }
+    return value;
+  },
+});
