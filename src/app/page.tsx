@@ -2,18 +2,21 @@
 
 import { useState, useMemo, useCallback } from "react";
 import {
-  locations as allLocations,
   announcements,
   categories,
   type Location,
   type CategoryId,
 } from "@/lib/data";
+import { useLocations } from "@/hooks/use-locations";
 import { EventMap } from "@/components/event-map";
 import { Announcements } from "@/components/announcements";
 import { SearchFilter } from "@/components/search-filter";
 import { DetailPanel } from "@/components/detail-panel";
 
 export default function Home() {
+  // --------------- Firestore データ ---------------
+  const { locations: allLocations, loading, error } = useLocations();
+
   // --------------- 状態管理 ---------------
   const [selectedLocation, setSelectedLocation] = useState<Location | null>(
     null
@@ -40,7 +43,7 @@ export default function Home() {
       }
       return true;
     });
-  }, [searchQuery, activeCategories]);
+  }, [allLocations, searchQuery, activeCategories]);
 
   // --------------- コールバック ---------------
   const handleToggleCategory = useCallback((id: CategoryId) => {
@@ -52,6 +55,34 @@ export default function Home() {
   const handleSelectLocation = useCallback((loc: Location) => {
     setSelectedLocation((prev) => (prev?.id === loc.id ? null : loc));
   }, []);
+
+  // --------------- ローディング / エラー ---------------
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="text-center">
+          <div className="mx-auto mb-3 h-8 w-8 animate-spin rounded-full border-2 border-gray-300 border-t-gray-600" />
+          <p className="text-sm text-gray-500">地点データを読み込み中...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="rounded-lg border border-red-200 bg-red-50 px-6 py-4 text-center">
+          <p className="text-sm font-medium text-red-800">{error}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="mt-2 text-xs text-red-600 underline"
+          >
+            再読み込み
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="mx-auto min-h-screen max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
