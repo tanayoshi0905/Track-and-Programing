@@ -44,17 +44,25 @@ export async function GET() {
         notes: d.notes ?? "",
         changeInfo: d.changeInfo ?? undefined,
         position: {
-          x: d.position?.x ?? 50,
-          y: d.position?.y ?? 50,
+          x: d.x ?? 50,
+          y: d.y ?? 50,
         },
       } satisfies Location;
     });
 
     return NextResponse.json(locations);
   } catch (error) {
-    console.error("Firestore 読み込みエラー:", error);
+    const msg = error instanceof Error ? error.message : String(error);
+    console.error("Firestore 読み込みエラー:", msg);
     return NextResponse.json(
-      { error: "データの取得に失敗しました" },
+      {
+        error: "データの取得に失敗しました",
+        detail: msg,
+        envCheck: {
+          FIREBASE_SERVICE_ACCOUNT: !!process.env.FIREBASE_SERVICE_ACCOUNT,
+          FIREBASE_SERVICE_ACCOUNT_PATH: !!process.env.FIREBASE_SERVICE_ACCOUNT_PATH,
+        },
+      },
       { status: 500 },
     );
   }
