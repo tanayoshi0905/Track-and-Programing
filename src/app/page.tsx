@@ -2,12 +2,12 @@
 
 import { useState, useMemo, useCallback } from "react";
 import {
-  announcements,
   categories,
   type Location,
   type CategoryId,
 } from "@/lib/data";
 import { useLocations } from "@/hooks/use-locations";
+import { useAnnouncements } from "@/hooks/use-announcements";
 import { EventMap } from "@/components/event-map";
 import { Announcements } from "@/components/announcements";
 import { SearchFilter } from "@/components/search-filter";
@@ -15,7 +15,11 @@ import { DetailPanel } from "@/components/detail-panel";
 
 export default function Home() {
   // --------------- Firestore データ ---------------
-  const { locations: allLocations, loading, error } = useLocations();
+  const { locations: allLocations, loading: locLoading, error: locError } = useLocations();
+  const { announcements, loading: annLoading, error: annError } = useAnnouncements();
+
+  const loading = locLoading || annLoading;
+  const error = locError || annError;
 
   // --------------- 状態管理 ---------------
   const [selectedLocation, setSelectedLocation] = useState<Location | null>(
