@@ -57,31 +57,75 @@ export function EventMap({
     setScale((prev) => Math.min(3, Math.max(0.5, prev - e.deltaY * 0.001)));
   }, []);
 
+  // ---- ピンチズーム (マルチタッチ) ----
+  const lastTouchDistance = useRef<number | null>(null);
+
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    if (e.touches.length === 2) {
+      const dx = e.touches[0].clientX - e.touches[1].clientX;
+      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      lastTouchDistance.current = Math.hypot(dx, dy);
+    }
+  }, []);
+
+  const handleTouchMove = useCallback((e: React.TouchEvent) => {
+    if (e.touches.length === 2 && lastTouchDistance.current !== null) {
+      const dx = e.touches[0].clientX - e.touches[1].clientX;
+      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      const distance = Math.hypot(dx, dy);
+      const delta = distance - lastTouchDistance.current;
+
+      // 拡大縮小の感度調整 (0.015)
+      setScale((prev) => Math.min(3, Math.max(0.5, prev + delta * 0.015)));
+      lastTouchDistance.current = distance;
+    }
+  }, []);
+
+  const handleTouchEnd = useCallback((e: React.TouchEvent) => {
+    if (e.touches.length < 2) {
+      lastTouchDistance.current = null;
+    }
+  }, []);
+
   // ---- ドラッグ ----
   const handlePointerDown = useCallback(
     (e: React.PointerEvent) => {
-      if ((e.target as SVGElement).closest(".map-pin")) return;
+      const target = e.target as Element;
+      // ピンやボタンをクリックした場合はドラッグ開始しない
+      if (target.closest(".map-pin") || target.closest("button")) return;
+      
       setDragging(true);
       dragStart.current = { x: e.clientX, y: e.clientY };
       offsetStart.current = { ...offset };
-      (e.target as Element).setPointerCapture?.(e.pointerId);
+      target.setPointerCapture?.(e.pointerId);
     },
     [offset]
   );
 
   const handlePointerMove = useCallback(
     (e: React.PointerEvent) => {
-      if (!dragging) return;
-      setOffset({
-        x: offsetStart.current.x + (e.clientX - dragStart.current.x),
-        y: offsetStart.current.y + (e.clientY - dragStart.current.y),
-      });
+      // ピンチズーム中はパンしない
+      if (!dragging || lastTouchDistance.current !== null) return;
+
+      let newX = offsetStart.current.x + (e.clientX - dragStart.current.x);
+      let newY = offsetStart.current.y + (e.clientY - dragStart.current.y);
+
+      // マップが画面外に消えないようにスクロール可能範囲を制限
+      // 拡大率に応じてスクロールできる幅を確保
+      const limitX = 150 + (scale - 1) * 200;
+      const limitY = 150 + (scale - 1) * 200;
+
+      newX = Math.max(-limitX, Math.min(limitX, newX));
+      newY = Math.max(-limitY, Math.min(limitY, newY));
+
+      setOffset({ x: newX, y: newY });
     },
-    [dragging]
+    [dragging, scale]
   );
 
-  const handlePointerUp = useCallback(() => {
+  const handlePointerUp = useCallback((e: React.PointerEvent) => {
     setDragging(false);
+    (e.target as Element).releasePointerCapture?.(e.pointerId);
   }, []);
 
   // ---- リセットボタン ----
@@ -100,26 +144,37 @@ export function EventMap({
   }, []);
 
   return (
-    <div className="relative h-full w-full overflow-hidden rounded-xl border border-gray-200 bg-gray-50">
+    <div
+      className="relative h-full w-full overflow-hidden rounded-xl border border-gray-200 bg-gray-50 touch-none overscroll-none select-none cursor-grab active:cursor-grabbing"
+      onWheel={handleWheel}
+      onPointerDown={handlePointerDown}
+      onPointerMove={handlePointerMove}
+      onPointerUp={handlePointerUp}
+      onPointerCancel={handlePointerUp}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+      onTouchCancel={handleTouchEnd}
+    >
       {/* ズームコントロール */}
       <div className="absolute top-3 right-3 z-10 flex flex-col gap-1">
         <button
           onClick={() => setScale((s) => Math.min(3, s + 0.2))}
-          className="flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 bg-white text-sm font-bold text-gray-600 shadow-sm transition-colors hover:bg-gray-100"
+          className="flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 bg-white text-sm font-bold text-gray-600 shadow-sm transition-colors hover:bg-gray-100 cursor-pointer"
           aria-label="ズームイン"
         >
           +
         </button>
         <button
           onClick={() => setScale((s) => Math.max(0.5, s - 0.2))}
-          className="flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 bg-white text-sm font-bold text-gray-600 shadow-sm transition-colors hover:bg-gray-100"
+          className="flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 bg-white text-sm font-bold text-gray-600 shadow-sm transition-colors hover:bg-gray-100 cursor-pointer"
           aria-label="ズームアウト"
         >
           −
         </button>
         <button
           onClick={handleReset}
-          className="flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 bg-white text-[10px] font-medium text-gray-500 shadow-sm transition-colors hover:bg-gray-100"
+          className="flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 bg-white text-[10px] font-medium text-gray-500 shadow-sm transition-colors hover:bg-gray-100 cursor-pointer"
           aria-label="リセット"
         >
           ↺
@@ -130,11 +185,7 @@ export function EventMap({
       <svg
         ref={svgRef}
         viewBox="0 0 100 90"
-        className="h-full w-full cursor-grab select-none active:cursor-grabbing"
-        onWheel={handleWheel}
-        onPointerDown={handlePointerDown}
-        onPointerMove={handlePointerMove}
-        onPointerUp={handlePointerUp}
+        className="h-full w-full"
         style={{
           transform: `translate(${offset.x}px, ${offset.y}px) scale(${scale})`,
           transformOrigin: "center center",
