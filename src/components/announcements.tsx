@@ -4,22 +4,22 @@ import { type Announcement } from "@/lib/data";
 
 const typeStyles: Record<
   Announcement["type"],
-  { bg: string; label: string; weight: string }
+  { bg: string; badge: string; text: string }
 > = {
   重要: {
-    bg: "bg-gray-100 border-l-4 border-l-gray-800",
-    label: "font-bold text-gray-900",
-    weight: "font-semibold",
+    bg: "bg-red-50 border-l-4 border-l-red-500",
+    badge: "bg-red-100 text-red-800",
+    text: "font-semibold text-red-950",
   },
   変更: {
-    bg: "bg-gray-50 border-l-4 border-l-gray-500",
-    label: "font-semibold text-gray-700",
-    weight: "font-medium",
+    bg: "bg-yellow-50 border-l-4 border-l-yellow-500",
+    badge: "bg-yellow-200 text-yellow-800",
+    text: "font-medium text-yellow-950",
   },
   案内: {
-    bg: "bg-white border-l-4 border-l-gray-300",
-    label: "font-medium text-gray-500",
-    weight: "font-normal",
+    bg: "bg-blue-50 border-l-4 border-l-blue-500",
+    badge: "bg-blue-100 text-blue-800",
+    text: "font-normal text-blue-950",
   },
 };
 
@@ -41,18 +41,18 @@ export function Announcements({ announcements }: AnnouncementsProps) {
           >
             <div className="flex items-center gap-2">
               <span
-                className={`inline-block rounded-md bg-gray-200/60 px-2 py-0.5 text-xs ${style.label}`}
+                className={`inline-block rounded-md px-2 py-0.5 text-xs font-bold ${style.badge}`}
               >
                 {ann.type}
               </span>
-              <span className={`text-sm ${style.weight} text-gray-800`}>
+              <span className={`text-sm ${style.text}`}>
                 {ann.title}
               </span>
-              <span className="ml-auto text-xs text-gray-400 whitespace-nowrap">
+              <span className="ml-auto text-xs text-gray-500 whitespace-nowrap">
                 {ann.timestamp}
               </span>
             </div>
-            <p className="mt-1 text-sm leading-relaxed text-gray-600">
+            <p className="mt-1 text-sm leading-relaxed text-gray-700">
               {ann.body}
             </p>
           </div>
