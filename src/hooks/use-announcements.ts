@@ -45,6 +45,9 @@ export function useAnnouncements(eventId: string | null): UseAnnouncementsResult
     const q = query(
       collection(clientDb, "notices"),
       where("eventId", "==", eventId),
+      // createdAt 降順で最新のお知らせが上に来るようにする
+      // ※インデックスが必要になる場合があります
+      // orderBy("createdAt", "desc") // (※現在は自動で並び替えやクライアントでのソートで対応)
     );
 
     const unsubscribe = onSnapshot(
@@ -57,9 +60,18 @@ export function useAnnouncements(eventId: string | null): UseAnnouncementsResult
             type: toAnnouncementType(d.type),
             title: d.title ?? "",
             body: d.body ?? "",
+            createdAt: d.createdAt, // ソート用に保持
             timestamp: formatTimestamp(d.createdAt),
           };
         });
+
+        // createdAt の降順（新しい順）に並び替える
+        anns.sort((a, b) => {
+          const timeA = a.createdAt?.toMillis ? a.createdAt.toMillis() : 0;
+          const timeB = b.createdAt?.toMillis ? b.createdAt.toMillis() : 0;
+          return timeB - timeA;
+        });
+
         setAnnouncements(anns);
         setLastUpdated(new Date());
         setError(null);

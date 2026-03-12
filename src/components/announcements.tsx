@@ -39,16 +39,16 @@ export function Announcements({ announcements }: AnnouncementsProps) {
             key={ann.id}
             className={`rounded-lg px-4 py-3 ${style.bg} transition-colors`}
           >
-            <div className="flex items-center gap-2">
+            <div className="flex items-start sm:items-center gap-2">
               <span
-                className={`inline-block rounded-md px-2 py-0.5 text-xs font-bold ${style.badge}`}
+                className={`shrink-0 rounded-md px-2 py-0.5 text-xs font-bold text-center ${style.badge}`}
               >
                 {ann.type}
               </span>
-              <span className={`text-sm ${style.text}`}>
+              <span className={`text-sm leading-tight sm:leading-normal ${style.text}`}>
                 {ann.title}
               </span>
-              <span className="ml-auto text-xs text-gray-500 whitespace-nowrap">
+              <span className="ml-auto shrink-0 text-xs text-gray-500 whitespace-nowrap">
                 {ann.timestamp}
               </span>
             </div>
