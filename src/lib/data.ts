@@ -38,6 +38,7 @@ export interface Announcement {
   title: string;
   body: string;
   timestamp: string;
+  createdAt?: any;
 }
 
 // --------------- カテゴリ一覧 ---------------
