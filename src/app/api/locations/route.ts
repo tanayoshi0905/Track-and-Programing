@@ -40,7 +40,7 @@ export async function GET() {
         shortName: d.shortName ?? "",
         category: toCategoryId(d.category),
         description: d.description ?? "",
-        hours: d.hours ?? "",
+        hours: d.openTime ?? d.hours ?? "",
         notes: d.notes ?? "",
         changeInfo: d.changeInfo ?? undefined,
         position: {
