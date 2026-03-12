@@ -65,8 +65,16 @@ export function useAnnouncements(eventId: string | null): UseAnnouncementsResult
           };
         });
 
-        // createdAt の降順（新しい順）に並び替える
+        // 1. "重要"を先頭にする
+        // 2. その後は createdAt の降順（新しい順）
         anns.sort((a, b) => {
+          const isAImportant = a.type === "重要";
+          const isBImportant = b.type === "重要";
+
+          if (isAImportant && !isBImportant) return -1;
+          if (!isAImportant && isBImportant) return 1;
+
+          // どちらも重要、あるいはどちらも重要でない場合は日付で比較
           const timeA = a.createdAt?.toMillis ? a.createdAt.toMillis() : 0;
           const timeB = b.createdAt?.toMillis ? b.createdAt.toMillis() : 0;
           return timeB - timeA;
