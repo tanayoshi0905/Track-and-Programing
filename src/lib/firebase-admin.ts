@@ -49,18 +49,17 @@ function getServiceAccount(): Record<string, string> {
   );
 }
 
-  try {
-    const serviceAccount = JSON.parse(readFileSync(absPath, "utf-8"));
-    return initializeApp({
-      credential: cert(serviceAccount),
-      storageBucket: process.env.FIREBASE_STORAGE_BUCKET ?? `${serviceAccount.project_id}.firebasestorage.app`,
-    });
-  } catch (error: any) {
-    throw new Error(
-      `Failed to initialize Firebase Admin SDK. Error reading or parsing credentials file at ${absPath}: ${error.message}`
-    );
+function getOrInitApp(): App {
+  const apps = getApps();
+  if (apps.length > 0) {
+    return apps[0];
   }
-  return initializeApp({ credential: cert(getServiceAccount()) });
+
+  const serviceAccount = getServiceAccount() as any;
+  return initializeApp({
+    credential: cert(serviceAccount),
+    storageBucket: process.env.FIREBASE_STORAGE_BUCKET ?? `${serviceAccount.project_id}.firebasestorage.app`,
+  });
 }
 
 let firestoreInstance: Firestore | null = null;
