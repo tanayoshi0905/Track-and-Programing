@@ -53,10 +53,12 @@ export function DetailPanel({ location }: DetailPanelProps) {
         </p>
 
         {/* 開催時間 */}
-        <div className="flex items-center gap-2 text-sm text-gray-600">
-          <Clock className="h-4 w-4 shrink-0 text-gray-400" />
-          <span>{location.hours}</span>
-        </div>
+        {location.hours && (
+          <div className="flex items-center gap-2 text-sm text-gray-600">
+            <Clock className="h-4 w-4 shrink-0 text-gray-400" />
+            <span>{location.hours}</span>
+          </div>
+        )}
 
         {/* 注意事項 */}
         {location.notes && (

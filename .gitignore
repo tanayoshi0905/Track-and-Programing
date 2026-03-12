@@ -43,3 +43,6 @@ trackandprograming-firebase-adminsdk-*.json
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+
+trackandprograming-firebase-adminsdk-*.json
