@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useRef, useEffect } from "react";
 import {
   categories,
   type Location,
@@ -49,6 +49,29 @@ export default function Home() {
   );
   const [searchQuery, setSearchQuery] = useState("");
   const [activeCategories, setActiveCategories] = useState<CategoryId[]>([]);
+
+  // スマホ向け: ピンを選択したときに詳細パネルへ自動スクロール
+  const detailPanelRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    // 選択された場合、少しの遅延（パネルの再レンダリング待ち）を入れてスクロール
+    if (selectedLocation && detailPanelRef.current) {
+      setTimeout(() => {
+        // lg(1024px)未満の画面幅（縦並びレイアウト時）のみスクロール
+        if (window.innerWidth < 1024) {
+          const element = detailPanelRef.current;
+          if (element) {
+            // 要素の現在位置 + 現在のスクロール量 - 上部のゆとり(24px)
+            const top = element.getBoundingClientRect().top + window.scrollY - 24;
+            window.scrollTo({
+              top,
+              behavior: "smooth",
+            });
+          }
+        }
+      }, 100); // レンダリング後のレイアウトシフトに間に合わせるため少し長めに待機
+    }
+  }, [selectedLocation]);
 
   // --------------- フィルタ ---------------
   const filteredLocations = useMemo(() => {
@@ -162,7 +185,7 @@ export default function Home() {
             onSelectLocation={handleSelectLocation}
           />
         </div>
-        <div className="lg:sticky lg:top-6 lg:self-start">
+        <div ref={detailPanelRef} className="lg:sticky lg:top-6 lg:self-start scroll-mt-6">
           <DetailPanel location={selectedLocation} />
         </div>
       </section>
