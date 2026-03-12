@@ -4,6 +4,7 @@
 
 import { initializeApp, cert, getApps, type App } from "firebase-admin/app";
 import { getFirestore, type Firestore } from "firebase-admin/firestore";
+import { getStorage } from "firebase-admin/storage";
 import { readFileSync } from "fs";
 import { resolve } from "path";
 
@@ -23,7 +24,10 @@ function getOrInitApp(): App {
 
   try {
     const serviceAccount = JSON.parse(readFileSync(absPath, "utf-8"));
-    return initializeApp({ credential: cert(serviceAccount) });
+    return initializeApp({
+      credential: cert(serviceAccount),
+      storageBucket: process.env.FIREBASE_STORAGE_BUCKET ?? `${serviceAccount.project_id}.firebasestorage.app`,
+    });
   } catch (error: any) {
     throw new Error(
       `Failed to initialize Firebase Admin SDK. Error reading or parsing credentials file at ${absPath}: ${error.message}`
@@ -45,3 +49,8 @@ export const db: Firestore = new Proxy({} as Firestore, {
     return value;
   },
 });
+
+/** Firebase Storage bucket (lazy init) */
+export function getStorageBucket() {
+  return getStorage(getOrInitApp()).bucket();
+}
