@@ -50,3 +50,51 @@ export interface Announcement {
   title: string;
   body: string;
 }
+
+// ============================================================
+// 階層別マップ + OCR 機能
+// ============================================================
+
+/** フロアマップの OCR ステータス */
+export type OcrStatus = "none" | "uploaded" | "processing" | "done" | "error";
+
+/** 建物情報 (Firestore: buildings コレクション) */
+export interface Building {
+  id: string;
+  name: string;
+  totalFloors: number;
+  createdAt: string;
+}
+
+/** フロアマップ (Firestore: floorMaps コレクション) */
+export interface FloorMap {
+  id: string;
+  buildingId: string;
+  floorNumber: number;
+  fileName: string;
+  fileType: string; // "image/png" | "image/jpeg" | "application/pdf"
+  storagePath: string;
+  downloadUrl: string;
+  ocrStatus: OcrStatus;
+}
+
+/** OCR 結果の部屋候補 */
+export interface RoomCandidate {
+  name: string;
+  x: number; // 画像上の位置 (0–100 %)
+  y: number;
+  width: number;
+  height: number;
+  confidence: number;
+}
+
+/** OCR 結果 (Firestore: ocrResults コレクション) */
+export interface OcrResult {
+  id: string;
+  buildingId: string;
+  floorNumber: number;
+  sourceFloorMapId: string;
+  extractedTexts: string[];
+  roomCandidates: RoomCandidate[];
+  simplifiedMapData: Record<string, unknown>;
+}

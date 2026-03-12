@@ -15,7 +15,9 @@ import {
   ImageIcon,
   X,
   Loader2,
+  Building2,
 } from "lucide-react";
+import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -124,6 +126,7 @@ export default function AdminDashboard({
     string | null
   >(null);
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
 
   // Announcement form state
   const [annForm, setAnnForm] = useState<{
@@ -159,12 +162,37 @@ export default function AdminDashboard({
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
       if (!file) return;
-      const url = URL.createObjectURL(file);
-      setMapImage(url);
-      // 注: 画像のアップロード先（Storage等）はMVPでは未実装
+
+      // プレビュー用にローカルURLを即座にセット
+      const previewUrl = URL.createObjectURL(file);
+      setMapImage(previewUrl);
+      setUploading(true);
+
+      // Base64に変換してFirestoreに保存
+      const reader = new FileReader();
+      reader.onloadend = async () => {
+        try {
+          const base64String = reader.result as string;
+          await handleUpdateEvent({ mapImageUrl: base64String });
+        } catch (err) {
+          console.error("画像アップロードエラー:", err);
+        } finally {
+          setUploading(false);
+        }
+      };
+      reader.readAsDataURL(file);
     },
-    []
+    [handleUpdateEvent]
   );
+
+  const handleDeleteMapImage = useCallback(async () => {
+    setMapImage(null);
+    try {
+      await handleUpdateEvent({ mapImageUrl: "" });
+    } catch (err) {
+      console.error("画像削除エラー:", err);
+    }
+  }, [handleUpdateEvent]);
 
   // ---- Handlers: Pins ----
   const handleMapClick = useCallback(
@@ -295,14 +323,22 @@ export default function AdminDashboard({
     <div className="min-h-screen bg-gray-50/60">
       {/* ---- Header ---- */}
       <header className="border-b bg-white px-6 py-5 md:px-10">
-        <div className="max-w-6xl">
-          <h1 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-            <Settings className="size-5 text-primary" />
-            イベント管理画面
-          </h1>
-          <p className="mt-1 text-sm text-gray-500">
-            配置図・地点情報・お知らせを登録して公開準備を行う
-          </p>
+        <div className="max-w-6xl flex items-start justify-between">
+          <div>
+            <h1 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+              <Settings className="size-5 text-primary" />
+              イベント管理画面
+            </h1>
+            <p className="mt-1 text-sm text-gray-500">
+              配置図・地点情報・お知らせを登録して公開準備を行う
+            </p>
+          </div>
+          <Link href="/admin/floor-maps">
+            <Button variant="outline" size="sm" className="gap-1.5">
+              <Building2 className="size-4" />
+              階層別マップ管理
+            </Button>
+          </Link>
         </div>
       </header>
 
@@ -451,6 +487,12 @@ export default function AdminDashboard({
             ) : (
               <div className="space-y-3">
                 <div className="relative overflow-hidden rounded-xl border">
+                  {uploading && (
+                    <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/70">
+                      <Loader2 className="size-8 animate-spin text-primary" />
+                      <span className="ml-2 text-sm text-gray-600">保存中…</span>
+                    </div>
+                  )}
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={mapImage}
@@ -463,6 +505,7 @@ export default function AdminDashboard({
                     size="sm"
                     variant="outline"
                     onClick={() => fileInputRef.current?.click()}
+                    disabled={uploading}
                   >
                     <Upload className="size-3.5 mr-1" />
                     画像を変更
@@ -471,7 +514,8 @@ export default function AdminDashboard({
                     size="sm"
                     variant="outline"
                     className="text-destructive hover:text-destructive"
-                    onClick={() => setMapImage(null)}
+                    onClick={handleDeleteMapImage}
+                    disabled={uploading}
                   >
                     <Trash2 className="size-3.5 mr-1" />
                     削除
