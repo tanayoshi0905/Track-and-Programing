@@ -62,8 +62,10 @@ export type OcrStatus = "none" | "uploaded" | "processing" | "done" | "error";
 export interface Building {
   id: string;
   name: string;
-  totalFloors: number;
-  createdAt: string;
+  totalFloors?: number;
+  createdAt?: string | Date | any;
+  eventId?: string;
+  isPublished?: boolean;
 }
 
 /** フロアマップ (Firestore: floorMaps コレクション) */
@@ -76,6 +78,8 @@ export interface FloorMap {
   storagePath: string;
   downloadUrl: string;
   ocrStatus: OcrStatus;
+  eventId?: string;
+  isPublished?: boolean;
 }
 
 /** OCR 結果の部屋候補 */
@@ -97,4 +101,6 @@ export interface OcrResult {
   extractedTexts: string[];
   roomCandidates: RoomCandidate[];
   simplifiedMapData: Record<string, unknown>;
+  eventId?: string;
+  isPublished?: boolean;
 }

@@ -1,6 +1,7 @@
 "use client";
 
-import { type Location, type CategoryId, getCategoryLabel } from "@/lib/data";
+import { type Location, type CategoryId } from "@/lib/data";
+import { type Building, type OcrResult } from "@/lib/types";
 import { useCallback, useRef, useState, useEffect } from "react";
 
 // --------------- カテゴリごとの色 ---------------
@@ -13,34 +14,25 @@ const categoryColors: Record<CategoryId, string> = {
   restroom: "#64748b",  // slate
 };
 
-// --------------- 建物データ（SVGで描画する矩形） ---------------
-interface Building {
-  label: string;
-  x: number;
-  y: number;
-  w: number;
-  h: number;
-}
-
-const buildings: Building[] = [
-  { label: "1号館", x: 8, y: 15, w: 16, h: 20 },
-  { label: "2号館", x: 20, y: 40, w: 18, h: 28 },
-  { label: "3号館", x: 42, y: 35, w: 18, h: 22 },
-  { label: "体育館", x: 64, y: 42, w: 22, h: 24 },
-  { label: "中庭", x: 32, y: 10, w: 30, h: 16 },
-];
-
 // --------------- Props ---------------
 interface EventMapProps {
   locations: Location[];
+  buildings: Building[];
+  ocrResult: OcrResult | null;
   selectedId: string | null;
   onSelectLocation: (loc: Location) => void;
+  onSelectBuilding?: (buildingId: string) => void;
+  selectedBuildingId?: string | null;
 }
 
 export function EventMap({
   locations,
+  buildings,
+  ocrResult,
   selectedId,
   onSelectLocation,
+  onSelectBuilding,
+  selectedBuildingId,
 }: EventMapProps) {
   const svgRef = useRef<SVGSVGElement>(null);
 
@@ -93,7 +85,7 @@ export function EventMap({
       const target = e.target as Element;
       // ピンやボタンをクリックした場合はドラッグ開始しない
       if (target.closest(".map-pin") || target.closest("button")) return;
-      
+
       setDragging(true);
       dragStart.current = { x: e.clientX, y: e.clientY };
       offsetStart.current = { ...offset };
@@ -204,32 +196,83 @@ export function EventMap({
         <line x1="38" y1="50" x2="42" y2="50" stroke="#d1d5db" strokeWidth="2" strokeLinecap="round" />
         <line x1="60" y1="50" x2="64" y2="50" stroke="#d1d5db" strokeWidth="2" strokeLinecap="round" />
 
-        {/* 建物 */}
-        {buildings.map((b) => (
-          <g key={b.label}>
+        {/* OCRに基づく部屋/教室の描画 */}
+        {ocrResult && ocrResult.roomCandidates.map((room, idx) => (
+          <g key={`ocr-${idx}`}>
             <rect
-              x={b.x}
-              y={b.y}
-              width={b.w}
-              height={b.h}
-              rx="1.2"
+              x={room.x}
+              y={room.y}
+              width={room.width}
+              height={room.height}
+              rx="0.5"
               fill="white"
               stroke="#cbd5e1"
-              strokeWidth="0.4"
+              strokeWidth="0.2"
+              className="opacity-80"
             />
             <text
-              x={b.x + b.w / 2}
-              y={b.y + b.h / 2}
+              x={room.x + room.width / 2}
+              y={room.y + room.height / 2}
               textAnchor="middle"
               dominantBaseline="central"
-              className="pointer-events-none select-none fill-gray-400"
-              fontSize="2.6"
+              className="pointer-events-none select-none fill-gray-500"
+              fontSize="2"
               fontWeight="500"
             >
-              {b.label}
+              {room.name}
             </text>
           </g>
         ))}
+
+        {/* OCRがない場合は建物の箱（ダミー位置またはリスト）を表示 */}
+        {!ocrResult && buildings.map((b, idx) => {
+          // モックデータの座標を暫定的に維持するか、動的に生成する
+          // ここでは元のモック位置を維持するロジック（建物名が一致する場合のみ）
+          const mockPos = [
+            { name: "1号館", x: 8, y: 15, w: 16, h: 20 },
+            { name: "2号館", x: 20, y: 40, w: 18, h: 28 },
+            { name: "3号館", x: 42, y: 35, w: 18, h: 22 },
+            { name: "体育館", x: 64, y: 42, w: 22, h: 24 },
+            { name: "本館", x: 8, y: 15, w: 16, h: 20 },
+            { name: "実習工場", x: 42, y: 35, w: 18, h: 22 },
+            { name: "別館", x: 20, y: 40, w: 18, h: 28 },
+          ].find(m => m.name === b.name);
+
+          if (!mockPos) return null;
+
+          const isSelected = selectedBuildingId === b.id;
+
+          return (
+            <g
+              key={b.id}
+              className="cursor-pointer group"
+              onClick={() => onSelectBuilding?.(b.id)}
+            >
+              <rect
+                x={mockPos.x}
+                y={mockPos.y}
+                width={mockPos.w}
+                height={mockPos.h}
+                rx="1.2"
+                fill={isSelected ? "#f0fdf4" : "white"}
+                stroke={isSelected ? "#10b981" : "#cbd5e1"}
+                strokeWidth={isSelected ? "0.8" : "0.4"}
+                className="transition-all group-hover:stroke-emerald-400"
+              />
+              <text
+                x={mockPos.x + mockPos.w / 2}
+                y={mockPos.y + mockPos.h / 2}
+                textAnchor="middle"
+                dominantBaseline="central"
+                className={`pointer-events-none select-none transition-colors ${isSelected ? "fill-emerald-700 font-bold" : "fill-gray-400"}`}
+                fontSize="2.6"
+                fontWeight="500"
+              >
+                {b.name}
+              </text>
+            </g>
+          );
+        })}
 
         {/* 地点ピン */}
         {locations.map((loc) => {
