@@ -41,13 +41,15 @@ export function useLocations(eventId: string | null): UseLocationsResult {
 
   useEffect(() => {
     if (!eventId) {
-      setLoading(false);
       return;
     }
+
+    setLoading(true);
 
     const q = query(
       collection(clientDb, "locations"),
       where("eventId", "==", eventId),
+      where("isPublished", "==", true),
     );
 
     const unsubscribe = onSnapshot(

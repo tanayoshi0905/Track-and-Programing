@@ -26,7 +26,9 @@ export async function createBuilding(
   const ref = await db.collection("buildings").add({
     name,
     totalFloors,
-    createdAt: new Date().toISOString(),
+    eventId: "kosen-fes-2026", // 現在のイベントID
+    isPublished: true,        // 利用者側に表示するためのフラグ
+    createdAt: new Date(),
   });
   return ref.id;
 }
@@ -89,7 +91,9 @@ export async function uploadFloorMap(
     downloadUrl,
     fileBase64,
     ocrStatus: "uploaded" as OcrStatus,
-    createdAt: new Date().toISOString(),
+    eventId: "kosen-fes-2026",
+    isPublished: true,
+    createdAt: new Date(),
   });
 
   return ref.id;
@@ -180,6 +184,8 @@ export async function runOcr(floorMapId: string): Promise<OcrResult | null> {
         extractedTexts: texts,
         roomCandidates: [],
         simplifiedMapData: { source: "pdf-parse", pageCount: textResult.pages.length },
+        eventId: floorMap.eventId ?? "kosen-fes-2026",
+        isPublished: floorMap.isPublished ?? true,
       };
 
       // 既存の ocrResult を削除してから新規作成
@@ -210,6 +216,8 @@ export async function runOcr(floorMapId: string): Promise<OcrResult | null> {
       extractedTexts: ocrOutput.extractedTexts,
       roomCandidates: ocrOutput.roomCandidates,
       simplifiedMapData: { source: "tesseract.js" },
+      eventId: floorMap.eventId ?? "kosen-fes-2026",
+      isPublished: floorMap.isPublished ?? true,
     };
 
     // 既存の ocrResult を削除してから新規作成
