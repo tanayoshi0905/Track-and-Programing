@@ -44,10 +44,11 @@ export function EventMap({
   const offsetStart = useRef({ x: 0, y: 0 });
 
   // ---- ホイールズーム ----
-  const handleWheel = useCallback((e: React.WheelEvent) => {
-    e.preventDefault();
-    setScale((prev) => Math.min(3, Math.max(0.5, prev - e.deltaY * 0.001)));
-  }, []);
+  const handleWheel = (e: React.WheelEvent) => {
+    const delta = e.deltaY > 0 ? 0.9 : 1.1;
+    const newScale = Math.min(Math.max(scale * delta, 0.5), 5);
+    setScale(newScale);
+  };
 
   // ---- ピンチズーム (マルチタッチ) ----
   const lastTouchDistance = useRef<number | null>(null);
