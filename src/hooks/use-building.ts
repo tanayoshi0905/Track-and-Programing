@@ -18,9 +18,10 @@ export function useBuilding(buildingId: string | null): UseBuildingResult {
 
     useEffect(() => {
         if (!buildingId) {
-            setLoading(false);
             return;
         }
+
+        setLoading(true);
 
         const docRef = doc(clientDb, "buildings", buildingId);
 
@@ -43,8 +44,8 @@ export function useBuilding(buildingId: string | null): UseBuildingResult {
                 setLoading(false);
             },
             (err) => {
-                console.error("建物詳細取得エラー:", err);
-                setError("建物の読み込みに失敗しました");
+                console.error("Firestore 建物リアルタイム監視エラー:", err);
+                setError(`建物の読み込みに失敗しました: ${err.message}`);
                 setLoading(false);
             }
         );

@@ -1,25 +1,22 @@
+"use client";
+
+import { use } from "react";
 import Link from 'next/link';
-import { db } from '@/lib/firebase-admin';
+import { useBuilding } from '@/hooks/use-building';
 
-export const dynamic = "force-dynamic";
+export default function BuildingDetailPage({ params }: { params: Promise<{ id: string }> }) {
+    const { id } = use(params);
+    const { building, loading, error } = useBuilding(id);
 
-export default async function BuildingDetailPage({ params }: { params: Promise<{ id: string }> }) {
-    const { id } = await params;
-    let building = null;
-    let error = null;
-
-    try {
-        const docRef = await db.collection("buildings").doc(id).get();
-        if (docRef.exists) {
-            building = {
-                id: docRef.id,
-                name: docRef.data()?.name || "名称未設定",
-                totalFloors: docRef.data()?.totalFloors,
-            };
-        }
-    } catch (e: any) {
-        console.error("建物詳細取得エラー:", e);
-        error = e.message;
+    if (loading) {
+        return (
+            <div className="mx-auto min-h-screen max-w-3xl px-4 py-8 sm:px-6 lg:px-8">
+                <div className="text-center py-12">
+                    <div className="mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-2 border-gray-300 border-t-emerald-600" />
+                    <p className="text-sm text-gray-500">建物詳細を読み込み中...</p>
+                </div>
+            </div>
+        );
     }
 
     if (error || !building) {

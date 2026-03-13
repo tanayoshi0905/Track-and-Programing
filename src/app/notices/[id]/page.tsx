@@ -1,36 +1,22 @@
+"use client";
+
+import { use } from "react";
 import Link from 'next/link';
-import { db } from '@/lib/firebase-admin';
+import { useAnnouncement } from '@/hooks/use-announcement';
 
-export const dynamic = "force-dynamic";
+export default function NoticeDetailPage({ params }: { params: Promise<{ id: string }> }) {
+    const { id } = use(params);
+    const { announcement, loading, error } = useAnnouncement(id);
 
-export default async function NoticeDetailPage({ params }: { params: Promise<{ id: string }> }) {
-    const { id } = await params;
-    let announcement = null;
-    let error = null;
-
-    try {
-        const docRef = await db.collection("notices").doc(id).get();
-        if (docRef.exists) {
-            const d = docRef.data();
-            let timestampStr = "";
-
-            if (d?.createdAt && typeof d.createdAt.toDate === 'function') {
-                timestampStr = d.createdAt.toDate().toLocaleString("ja-JP", { timeZone: "Asia/Tokyo" });
-            } else {
-                timestampStr = String(d?.createdAt || "");
-            }
-
-            announcement = {
-                id: docRef.id,
-                type: d?.type || "案内",
-                title: d?.title || "",
-                body: d?.body || "",
-                timestamp: timestampStr,
-            };
-        }
-    } catch (e: any) {
-        console.error("お知らせ詳細取得エラー:", e);
-        error = e.message;
+    if (loading) {
+        return (
+            <div className="mx-auto min-h-screen max-w-3xl px-4 py-8 sm:px-6 lg:px-8">
+                <div className="text-center py-12">
+                    <div className="mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-2 border-gray-300 border-t-orange-600" />
+                    <p className="text-sm text-gray-500">お知らせ詳細を読み込み中...</p>
+                </div>
+            </div>
+        );
     }
 
     if (error || !announcement) {

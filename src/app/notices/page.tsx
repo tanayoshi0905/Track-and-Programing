@@ -1,54 +1,14 @@
+"use client";
+
 import Link from 'next/link';
-import { db } from '@/lib/firebase-admin';
+import { useEvent } from '@/hooks/use-event';
+import { useAnnouncements } from '@/hooks/use-announcements';
 
-export const dynamic = "force-dynamic";
+export default function NoticesPage() {
+    const { eventId, loading: eventLoading } = useEvent();
+    const { announcements, loading: announcementsLoading, error: announcementsError } = useAnnouncements(eventId);
 
-export default async function NoticesPage() {
-    let announcements: any[] = [];
-    let error = null;
-
-    try {
-        const eventsSnap = await db.collection("events").where("isPublished", "==", true).limit(1).get();
-
-        if (!eventsSnap.empty) {
-            const eventId = eventsSnap.docs[0].id;
-            const noticesSnap = await db.collection("notices").where("eventId", "==", eventId).get();
-
-            announcements = noticesSnap.docs.map(doc => {
-                const d = doc.data();
-                let timestampStr = "";
-
-                if (d.createdAt && typeof d.createdAt.toDate === 'function') {
-                    timestampStr = d.createdAt.toDate().toLocaleString("ja-JP", { timeZone: "Asia/Tokyo" });
-                } else {
-                    timestampStr = String(d.createdAt || "");
-                }
-
-                return {
-                    id: doc.id,
-                    type: d.type || "案内",
-                    title: d.title || "",
-                    body: d.body || "",
-                    createdAtMillis: d.createdAt?.toMillis ? d.createdAt.toMillis() : 0,
-                    timestamp: timestampStr,
-                };
-            });
-
-            // Sort: 1. Important first, 2. Newest first
-            announcements.sort((a, b) => {
-                const isAImportant = a.type === "重要";
-                const isBImportant = b.type === "重要";
-
-                if (isAImportant && !isBImportant) return -1;
-                if (!isAImportant && isBImportant) return 1;
-
-                return b.createdAtMillis - a.createdAtMillis;
-            });
-        }
-    } catch (e: any) {
-        console.error("お知らせ一覧取得エラー:", e);
-        error = e.message;
-    }
+    const isLoading = eventLoading || announcementsLoading;
 
     return (
         <div className="mx-auto min-h-screen max-w-3xl px-4 py-8 sm:px-6 lg:px-8">
@@ -58,9 +18,14 @@ export default async function NoticesPage() {
             </header>
 
             <div className="space-y-4">
-                {error ? (
+                {isLoading ? (
+                    <div className="text-center py-8">
+                        <div className="mx-auto mb-3 h-8 w-8 animate-spin rounded-full border-2 border-gray-300 border-t-orange-600" />
+                        <p className="text-sm text-gray-500">お知らせを読み込み中...</p>
+                    </div>
+                ) : announcementsError ? (
                     <div className="rounded-lg border border-red-200 bg-red-50 px-6 py-4 text-center">
-                        <p className="text-sm font-medium text-red-800">読み込みに失敗しました: {error}</p>
+                        <p className="text-sm font-medium text-red-800">{announcementsError}</p>
                     </div>
                 ) : announcements.length === 0 ? (
                     <p className="text-gray-500 text-sm py-4">現在お知らせはありません</p>

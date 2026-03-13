@@ -35,10 +35,9 @@ export function useAnnouncement(announcementId: string | null): UseAnnouncementR
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
-        if (!announcementId) {
-            setLoading(false);
-            return;
-        }
+        if (!announcementId) return;
+
+        setLoading(true);
 
         const docRef = doc(clientDb, "notices", announcementId);
 
@@ -64,7 +63,7 @@ export function useAnnouncement(announcementId: string | null): UseAnnouncementR
             },
             (err) => {
                 console.error("お知らせ詳細取得エラー:", err);
-                setError("お知らせの読み込みに失敗しました");
+                setError(`読み込みに失敗しました: ${err.message}`);
                 setLoading(false);
             }
         );
