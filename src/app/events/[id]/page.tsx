@@ -17,6 +17,7 @@ import { EventMap } from "@/components/event-map";
 import { Announcements } from "@/components/announcements";
 import { SearchFilter } from "@/components/search-filter";
 import { DetailPanel } from "@/components/detail-panel";
+import { FirstViewModal } from "@/components/first-view-modal";
 
 export default function Home() {
   // --------------- Firestore: 公開イベント取得 ---------------
@@ -153,6 +154,7 @@ export default function Home() {
 
   return (
     <div className="mx-auto min-h-screen max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+      <FirstViewModal />
       {/* ============ ヘッダー ============ */}
       <header className="mb-6">
         <div className="flex items-baseline justify-between">
