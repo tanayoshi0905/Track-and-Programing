@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { doc, onSnapshot } from "firebase/firestore";
 import { clientDb } from "@/lib/firebase-client";
-import type { Building } from "./use-buildings";
+import { type Building } from "@/lib/types";
 
 interface UseBuildingResult {
     building: Building | null;
