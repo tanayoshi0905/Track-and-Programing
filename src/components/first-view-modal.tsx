@@ -9,16 +9,25 @@ export function FirstViewModal() {
 
   useEffect(() => {
     setIsMounted(true);
-    // 初回訪問かどうかを判定
-    const hasSeenMapOnboarding = localStorage.getItem("hasSeenMapOnboarding");
-    if (!hasSeenMapOnboarding) {
-      setIsOpen(true);
-    }
+    setIsOpen(true);
+
+    // ページロード時にマップセクションまで自動的に少し遅らせてスクロール
+    const timer = setTimeout(() => {
+      const mapSection = document.getElementById("map-section");
+      if (mapSection) {
+        const top = mapSection.getBoundingClientRect().top + window.scrollY - 80;
+        window.scrollTo({
+          top,
+          behavior: "smooth",
+        });
+      }
+    }, 100);
+
+    return () => clearTimeout(timer);
   }, []);
 
-  const handleStart = () => {
+  const handleClose = () => {
     setIsOpen(false);
-    localStorage.setItem("hasSeenMapOnboarding", "true");
   };
 
   if (!isMounted) return null;
@@ -105,7 +114,7 @@ export function FirstViewModal() {
         </div>
 
         <button
-          onClick={handleStart}
+          onClick={handleClose}
           className="w-full max-w-[240px] bg-[#4285f4] hover:bg-blue-600 active:bg-blue-700 text-white font-medium py-3 px-6 rounded-full transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 mb-2"
         >
           はじめる

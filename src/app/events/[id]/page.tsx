@@ -179,7 +179,7 @@ export default function Home() {
       </section>
 
       {/* ============ メイン: 地図 + 詳細 ============ */}
-      <section className="grid gap-5 lg:grid-cols-[2fr_1fr]" aria-label="地図と詳細">
+      <section id="map-section" className="grid gap-5 lg:grid-cols-[2fr_1fr]" aria-label="地図と詳細">
         <div className="aspect-[4/3] lg:aspect-auto lg:min-h-[480px]">
           <EventMap
             locations={filteredLocations}
