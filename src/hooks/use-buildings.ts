@@ -3,13 +3,7 @@
 import { useState, useEffect } from "react";
 import { collection, query, where, onSnapshot, orderBy } from "firebase/firestore";
 import { clientDb } from "@/lib/firebase-client";
-
-export interface Building {
-    id: string;
-    name: string;
-    totalFloors?: number;
-    createdAt?: any;
-}
+import { type Building } from "@/lib/types";
 
 interface UseBuildingsResult {
     buildings: Building[];
@@ -33,7 +27,8 @@ export function useBuildings(eventId: string | null): UseBuildingsResult {
 
         const q = query(
             collection(clientDb, "buildings"),
-            where("eventId", "==", eventId)
+            where("eventId", "==", eventId),
+            where("isPublished", "==", true)
         );
 
         const unsubscribe = onSnapshot(

@@ -49,6 +49,7 @@ export function useLocations(eventId: string | null): UseLocationsResult {
     const q = query(
       collection(clientDb, "locations"),
       where("eventId", "==", eventId),
+      where("isPublished", "==", true),
     );
 
     const unsubscribe = onSnapshot(

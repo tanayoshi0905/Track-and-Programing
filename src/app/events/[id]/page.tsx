@@ -9,6 +9,10 @@ import {
 import { useEvent } from "@/hooks/use-event";
 import { useLocations } from "@/hooks/use-locations";
 import { useAnnouncements } from "@/hooks/use-announcements";
+import { useBuildings } from "@/hooks/use-buildings";
+import { useFloorMaps } from "@/hooks/use-floor-maps";
+import { useOcrResult } from "@/hooks/use-ocr-result";
+import { type Building, type FloorMap } from "@/lib/types";
 import { EventMap } from "@/components/event-map";
 import { Announcements } from "@/components/announcements";
 import { SearchFilter } from "@/components/search-filter";
@@ -32,7 +36,23 @@ export default function Home() {
     lastUpdated: annUpdated,
   } = useAnnouncements(eventId);
 
-  const loading = evLoading || locLoading || annLoading;
+  // --- 地図のための動的データ追加 ---
+  const { buildings, loading: bldLoading } = useBuildings(eventId);
+  const [selectedBuildingId, setSelectedBuildingId] = useState<string | null>(null);
+  const { floorMaps, loading: fmLoading } = useFloorMaps(selectedBuildingId);
+  const [selectedFloorMapId, setSelectedFloorMapId] = useState<string | null>(null);
+  const { ocrResult, loading: ocrLoading } = useOcrResult(selectedFloorMapId);
+
+  // 建物が変わったら最初の階を選択
+  useEffect(() => {
+    if (floorMaps.length > 0) {
+      setSelectedFloorMapId(floorMaps[0].id);
+    } else {
+      setSelectedFloorMapId(null);
+    }
+  }, [floorMaps]);
+
+  const loading = evLoading || locLoading || annLoading || bldLoading;
   const error = evError || locError || annError;
 
   // 最新の更新時刻
@@ -178,12 +198,79 @@ export default function Home() {
 
       {/* ============ メイン: 地図 + 詳細 ============ */}
       <section className="grid gap-5 lg:grid-cols-[2fr_1fr]" aria-label="地図と詳細">
-        <div className="aspect-[4/3] lg:aspect-auto lg:min-h-[480px]">
-          <EventMap
-            locations={filteredLocations}
-            selectedId={selectedLocation?.id ?? null}
-            onSelectLocation={handleSelectLocation}
-          />
+        <div className="flex flex-col gap-3">
+          {/* 建物・フロア選択（動的マップ用） */}
+          {buildings.length > 0 && (
+            <div className="flex flex-wrap items-center gap-3 bg-white p-3 rounded-xl border border-gray-200 shadow-sm transition-all animate-in fade-in slide-in-from-top-2">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold text-gray-500">表示対象:</span>
+                <select
+                  title="Building Selector"
+                  className="text-sm font-medium border-none bg-gray-50 rounded-lg px-3 py-1.5 outline-none ring-1 ring-gray-200 focus:ring-emerald-500 transition-all cursor-pointer"
+                  value={selectedBuildingId ?? ""}
+                  onChange={(e) => setSelectedBuildingId(e.target.value || null)}
+                >
+                  <option value="">🏫 キャンパスマップ (全体)</option>
+                  {buildings.map((b: Building) => (
+                    <option key={b.id} value={b.id}>{b.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              {selectedBuildingId && (
+                <div className="flex items-center gap-2 border-l pl-3 border-gray-100">
+                  <span className="text-xs font-bold text-gray-500">フロア:</span>
+                  <div className="flex gap-1.5">
+                    {floorMaps.length > 0 ? (
+                      floorMaps.map((fm: FloorMap) => (
+                        <button
+                          key={fm.id}
+                          onClick={() => setSelectedFloorMapId(fm.id)}
+                          className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${selectedFloorMapId === fm.id
+                              ? "bg-emerald-600 text-white shadow-md ring-2 ring-emerald-600 ring-offset-1"
+                              : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                            }`}
+                        >
+                          {fm.floorNumber}F
+                        </button>
+                      ))
+                    ) : (
+                      <span className="text-[10px] text-gray-400 italic">マップ未登録</span>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {selectedBuildingId && (
+                <button
+                  onClick={() => setSelectedBuildingId(null)}
+                  className="ml-auto flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 transition-colors"
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M11 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+                  <span>全体図に戻る</span>
+                </button>
+              )}
+
+              {ocrLoading && (
+                <div className="flex items-center gap-1.5 ml-auto text-emerald-600">
+                  <div className="w-3 h-3 border-2 border-emerald-600 border-t-transparent animate-spin rounded-full"></div>
+                  <span className="text-[10px] font-bold">OCR解析中...</span>
+                </div>
+              )}
+            </div>
+          )}
+
+          <div className="aspect-[4/3] lg:aspect-auto lg:min-h-[480px]">
+            <EventMap
+              locations={filteredLocations}
+              buildings={buildings}
+              ocrResult={ocrResult}
+              selectedId={selectedLocation?.id ?? null}
+              onSelectLocation={handleSelectLocation}
+              onSelectBuilding={setSelectedBuildingId}
+              selectedBuildingId={selectedBuildingId}
+            />
+          </div>
         </div>
         <div ref={detailPanelRef} className="lg:sticky lg:top-6 lg:self-start scroll-mt-6">
           <DetailPanel location={selectedLocation} />

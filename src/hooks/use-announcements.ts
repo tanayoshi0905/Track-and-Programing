@@ -46,9 +46,7 @@ export function useAnnouncements(eventId: string | null): UseAnnouncementsResult
     const q = query(
       collection(clientDb, "notices"),
       where("eventId", "==", eventId),
-      // createdAt 降順で最新のお知らせが上に来るようにする
-      // ※インデックスが必要になる場合があります
-      // orderBy("createdAt", "desc") // (※現在は自動で並び替えやクライアントでのソートで対応)
+      where("isPublished", "==", true),
     );
 
     const unsubscribe = onSnapshot(
