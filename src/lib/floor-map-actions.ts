@@ -38,25 +38,33 @@ export async function fetchBuildings(): Promise<Building[]> {
   const snap = await db.collection("buildings").get();
   const docs = snap.docs.map((doc) => {
     const d = doc.data();
+    
+    // Firestore Timestamp や Date オブジェクトを文字列に変換
+    let createdAt = d.createdAt ?? "";
+    if (createdAt && typeof createdAt !== "string") {
+      if (typeof (createdAt as any).toDate === "function") {
+        createdAt = (createdAt as any).toDate().toISOString();
+      } else if (createdAt instanceof Date) {
+        createdAt = createdAt.toISOString();
+      } else {
+        createdAt = String(createdAt);
+      }
+    }
+
     return {
       id: doc.id,
       name: d.name ?? "",
       totalFloors: d.totalFloors ?? 1,
-      createdAt: d.createdAt,
+      createdAt,
     };
   });
 
-  // クライアント側でソート（Timestamp/String両対応を維持）
-  docs.sort((a, b) => {
-    const timeA = a.createdAt?.toMillis ? a.createdAt.toMillis() : (a.createdAt ? new Date(a.createdAt).getTime() : 0);
-    const timeB = b.createdAt?.toMillis ? b.createdAt.toMillis() : (b.createdAt ? new Date(b.createdAt).getTime() : 0);
-    return timeB - timeA;
+  // クライアント側でソート（降順）
+  return docs.sort((a, b) => {
+    const dateA = a.createdAt || "";
+    const dateB = b.createdAt || "";
+    return dateB.localeCompare(dateA);
   });
-
-  return docs.map(d => ({
-    ...d,
-    createdAt: d.createdAt?.toISOString ? d.createdAt.toISOString() : (d.createdAt?.toDate ? d.createdAt.toDate().toISOString() : String(d.createdAt || ""))
-  })) as Building[];
 }
 
 // ============================================================
@@ -149,10 +157,12 @@ export async function runOcr(floorMapId: string): Promise<OcrResult | null> {
 
   try {
     // Firestore から base64 データを取得してバッファに変換
-    const base64Data: string = floorMap.fileBase64 ?? "";
-    if (!base64Data) {
+    const rawBase64: string = floorMap.fileBase64 ?? "";
+    if (!rawBase64) {
       throw new Error("fileBase64 data not found in Firestore document");
     }
+    // "data:image/png;base64," などのプレフィックスが含まれていれば削除する
+    const base64Data = rawBase64.replace(/^data:[a-zA-Z0-9\/+-]+;base64,/, "");
     const buffer = Buffer.from(base64Data, "base64");
 
     if (floorMap.fileType === "application/pdf") {

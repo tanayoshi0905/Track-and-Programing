@@ -139,6 +139,10 @@ export default function FloorMapDashboard({
   const selectedBuilding = buildings.find((b) => b.id === selectedBuildingId);
   const totalFloors = selectedBuilding?.totalFloors ?? 0;
 
+  // ---- Hydration Safe Guard ----
+  const [mounted, setMounted] = useState(false);
+  React.useEffect(() => setMounted(true), []);
+
   // ---- Load floor maps when building changes ----
   const loadFloorMaps = useCallback(async (buildingId: string) => {
     const maps = await fetchFloorMaps(buildingId);
@@ -290,6 +294,10 @@ export default function FloorMapDashboard({
   // ============================================================
   // Render
   // ============================================================
+  if (!mounted) {
+    return null; // または適当なローディングスケルトン
+  }
+
   return (
     <div className="min-h-screen bg-gray-50/60">
       {/* Header */}
