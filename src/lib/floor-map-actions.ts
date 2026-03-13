@@ -261,3 +261,39 @@ export async function fetchOcrResult(
     simplifiedMapData: d.simplifiedMapData ?? {},
   };
 }
+/** 特定建物の全フロアの OCR 結果を集約して取得（プレビュー用） */
+export async function fetchAllOcrResultsForBuilding(
+  buildingId: string
+): Promise<any[]> {
+  const snap = await db
+    .collection("ocrResults")
+    .where("buildingId", "==", buildingId)
+    .get();
+
+  const allLabels: any[] = [];
+
+  snap.docs.forEach((doc) => {
+    const d = doc.data();
+    const floorNumber = d.floorNumber ?? 0;
+    const candidates = (d.roomCandidates || []) as any[];
+
+    candidates.forEach((c, idx) => {
+      allLabels.push({
+        id: `${doc.id}-${idx}`,
+        text: c.name,
+        type: c.type || "room",
+        confidence: c.confidence,
+        approxPosition: {
+          x: (c.x ?? 0) / 100,
+          y: (c.y ?? 0) / 100,
+        },
+        width: (c.width ?? 10) / 100,
+        height: (c.height ?? 5) / 100,
+        status: "pending",
+        floorNumber,
+      });
+    });
+  });
+
+  return allLabels;
+}

@@ -86,6 +86,9 @@ export interface RoomCandidate {
   width: number;
   height: number;
   confidence: number;
+  type?: string;
+  zoneId?: string;
+  connectedCorridorIds?: string[];
 }
 
 /** OCR 結果 (Firestore: ocrResults コレクション) */
