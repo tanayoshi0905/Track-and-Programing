@@ -26,7 +26,9 @@ export async function createBuilding(
   const ref = await db.collection("buildings").add({
     name,
     totalFloors,
-    createdAt: new Date().toISOString(),
+    eventId: "kosen-fes-2026", // 現在のイベントID
+    isPublished: true,        // 利用者側に表示するためのフラグ
+    createdAt: new Date(),
   });
   return ref.id;
 }
@@ -40,11 +42,21 @@ export async function fetchBuildings(): Promise<Building[]> {
       id: doc.id,
       name: d.name ?? "",
       totalFloors: d.totalFloors ?? 1,
-      createdAt: d.createdAt ?? "",
+      createdAt: d.createdAt,
     };
   });
-  // クライアント側でソート（composite index 不要）
-  return docs.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+
+  // クライアント側でソート（Timestamp/String両対応を維持）
+  docs.sort((a, b) => {
+    const timeA = a.createdAt?.toMillis ? a.createdAt.toMillis() : (a.createdAt ? new Date(a.createdAt).getTime() : 0);
+    const timeB = b.createdAt?.toMillis ? b.createdAt.toMillis() : (b.createdAt ? new Date(b.createdAt).getTime() : 0);
+    return timeB - timeA;
+  });
+
+  return docs.map(d => ({
+    ...d,
+    createdAt: d.createdAt?.toISOString ? d.createdAt.toISOString() : (d.createdAt?.toDate ? d.createdAt.toDate().toISOString() : String(d.createdAt || ""))
+  })) as Building[];
 }
 
 // ============================================================
@@ -71,7 +83,9 @@ export async function uploadFloorMap(
     downloadUrl,
     fileBase64,
     ocrStatus: "uploaded" as OcrStatus,
-    createdAt: new Date().toISOString(),
+    eventId: "kosen-fes-2026",
+    isPublished: true,
+    createdAt: new Date(),
   });
 
   return ref.id;

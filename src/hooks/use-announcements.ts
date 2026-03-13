@@ -38,9 +38,10 @@ export function useAnnouncements(eventId: string | null): UseAnnouncementsResult
 
   useEffect(() => {
     if (!eventId) {
-      setLoading(false);
       return;
     }
+
+    setLoading(true);
 
     const q = query(
       collection(clientDb, "notices"),
@@ -74,9 +75,10 @@ export function useAnnouncements(eventId: string | null): UseAnnouncementsResult
           if (isAImportant && !isBImportant) return -1;
           if (!isAImportant && isBImportant) return 1;
 
-          // どちらも重要、あるいはどちらも重要でない場合は日付で比較
-          const timeA = a.createdAt?.toMillis ? a.createdAt.toMillis() : 0;
-          const timeB = b.createdAt?.toMillis ? b.createdAt.toMillis() : 0;
+          // createdAt を数値(ms)に変換して比較
+          const timeA = a.createdAt?.toMillis ? a.createdAt.toMillis() : (a.createdAt ? new Date(a.createdAt).getTime() : 0);
+          const timeB = b.createdAt?.toMillis ? b.createdAt.toMillis() : (b.createdAt ? new Date(b.createdAt).getTime() : 0);
+
           return timeB - timeA;
         });
 
@@ -87,7 +89,7 @@ export function useAnnouncements(eventId: string | null): UseAnnouncementsResult
       },
       (err) => {
         console.error("Firestore notices リアルタイム監視エラー:", err);
-        setError("お知らせの読み込みに失敗しました");
+        setError(`お知らせの読み込みに失敗しました: ${err.message}`);
         setLoading(false);
       },
     );

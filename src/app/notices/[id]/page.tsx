@@ -1,20 +1,52 @@
-import Link from 'next/link';
+"use client";
 
-export default function NoticeDetailPage({ params }: { params: { id: string } }) {
+import { use } from "react";
+import Link from 'next/link';
+import { useAnnouncement } from '@/hooks/use-announcement';
+
+export default function NoticeDetailPage({ params }: { params: Promise<{ id: string }> }) {
+    const { id } = use(params);
+    const { announcement, loading, error } = useAnnouncement(id);
+
+    if (loading) {
+        return (
+            <div className="mx-auto min-h-screen max-w-3xl px-4 py-8 sm:px-6 lg:px-8">
+                <div className="text-center py-12">
+                    <div className="mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-2 border-gray-300 border-t-orange-600" />
+                    <p className="text-sm text-gray-500">お知らせ詳細を読み込み中...</p>
+                </div>
+            </div>
+        );
+    }
+
+    if (error || !announcement) {
+        return (
+            <div className="mx-auto min-h-screen max-w-3xl px-4 py-8 sm:px-6 lg:px-8">
+                <div className="rounded-lg border border-red-200 bg-red-50 px-6 py-4 text-center mt-8">
+                    <p className="text-sm font-medium text-red-800">{error || "お知らせが見つかりません"}</p>
+                </div>
+                <div className="mt-8">
+                    <Link href="/notices" className="text-orange-600 hover:underline">← お知らせ一覧に戻る</Link>
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div className="mx-auto min-h-screen max-w-3xl px-4 py-8 sm:px-6 lg:px-8">
             <header className="mb-8 pb-6 border-b">
                 <div className="flex items-center gap-3 mb-4">
-                    <span className="text-xs font-bold px-2 py-1 bg-gray-100 text-gray-800 rounded-md">お知らせ</span>
-                    <time className="text-sm text-gray-500">2026.03.13</time>
+                    <span className={`text-xs font-bold px-2 py-1 rounded-md ${announcement.type === '重要' ? 'bg-orange-100 text-orange-800' : announcement.type === '変更' ? 'bg-red-100 text-red-800' : 'bg-blue-100 text-blue-800'}`}>
+                        {announcement.type}
+                    </span>
+                    <time className="text-sm text-gray-500">{announcement.timestamp}</time>
                 </div>
-                <h1 className="text-3xl font-bold tracking-tight text-gray-900">お知らせ詳細: {params.id}</h1>
+                <h1 className="text-3xl font-bold tracking-tight text-gray-900">{announcement.title}</h1>
             </header>
 
-            <div className="prose prose-orange max-w-none">
-                <p className="text-gray-700 leading-relaxed">
-                    お知らせ本文がここに入ります。Firebaseからデータを取得して表示する予定です。
-                    現在はプレースホルダーとしてID <strong>{params.id}</strong> を表示しています。
+            <div className="prose prose-orange max-w-none bg-white p-6 sm:p-8 rounded-2xl shadow-sm border whitespace-pre-wrap">
+                <p className="text-gray-800 leading-relaxed text-base sm:text-lg">
+                    {announcement.body}
                 </p>
             </div>
 

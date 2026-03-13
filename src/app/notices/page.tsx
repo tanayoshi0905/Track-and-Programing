@@ -6,7 +6,7 @@ import { useAnnouncements } from '@/hooks/use-announcements';
 
 export default function NoticesPage() {
     const { eventId, loading: eventLoading } = useEvent();
-    const { announcements, loading: announcementsLoading } = useAnnouncements(eventId);
+    const { announcements, loading: announcementsLoading, error: announcementsError } = useAnnouncements(eventId);
 
     const isLoading = eventLoading || announcementsLoading;
 
@@ -20,8 +20,12 @@ export default function NoticesPage() {
             <div className="space-y-4">
                 {isLoading ? (
                     <div className="text-center py-8">
-                        <div className="mx-auto mb-3 h-8 w-8 animate-spin rounded-full border-2 border-gray-300 border-t-gray-600" />
+                        <div className="mx-auto mb-3 h-8 w-8 animate-spin rounded-full border-2 border-gray-300 border-t-orange-600" />
                         <p className="text-sm text-gray-500">お知らせを読み込み中...</p>
+                    </div>
+                ) : announcementsError ? (
+                    <div className="rounded-lg border border-red-200 bg-red-50 px-6 py-4 text-center">
+                        <p className="text-sm font-medium text-red-800">{announcementsError}</p>
                     </div>
                 ) : announcements.length === 0 ? (
                     <p className="text-gray-500 text-sm py-4">現在お知らせはありません</p>
