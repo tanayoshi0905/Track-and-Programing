@@ -315,9 +315,21 @@ export default function FloorMapDashboard({
               階層別マップ管理
             </h1>
           </div>
-          <p className="mt-1 text-sm text-gray-500 ml-8">
-            建物の各階ごとにフロアマップをアップロードし、OCR 解析を実行
-          </p>
+          <div className="flex items-center justify-between ml-8">
+            <p className="mt-1 text-sm text-gray-500">
+              建物の各階ごとにフロアマップをアップロードし、OCR 解析を実行
+            </p>
+            {selectedBuilding && 
+             floorMaps.length === selectedBuilding.totalFloors && 
+             floorMaps.every(m => m.ocrStatus === "done") && (
+              <Button asChild size="sm" className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-md">
+                <Link href={`/admin/ai-map?buildingId=${selectedBuilding.id}`}>
+                  <Scan className="size-4 mr-2" />
+                  AI 生成マッププレビューへ
+                </Link>
+              </Button>
+            )}
+          </div>
         </div>
       </header>
 
