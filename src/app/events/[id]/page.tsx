@@ -1,0 +1,288 @@
+"use client";
+
+import { useState, useMemo, useCallback, useRef, useEffect } from "react";
+import {
+  categories,
+  type Location,
+  type CategoryId,
+} from "@/lib/data";
+import { useEvent } from "@/hooks/use-event";
+import { useLocations } from "@/hooks/use-locations";
+import { useAnnouncements } from "@/hooks/use-announcements";
+import { useBuildings } from "@/hooks/use-buildings";
+import { useFloorMaps } from "@/hooks/use-floor-maps";
+import { useOcrResult } from "@/hooks/use-ocr-result";
+import { type Building, type FloorMap } from "@/lib/types";
+import { EventMap } from "@/components/event-map";
+import { Announcements } from "@/components/announcements";
+import { SearchFilter } from "@/components/search-filter";
+import { DetailPanel } from "@/components/detail-panel";
+import { FirstViewModal } from "@/components/first-view-modal";
+
+export default function Home() {
+  // --------------- Firestore: 公開イベント取得 ---------------
+  const { eventId, loading: evLoading, error: evError } = useEvent();
+
+  // --------------- Firestore: リアルタイムデータ ---------------
+  const {
+    locations: allLocations,
+    loading: locLoading,
+    error: locError,
+    lastUpdated: locUpdated,
+  } = useLocations(eventId);
+  const {
+    announcements,
+    loading: annLoading,
+    error: annError,
+    lastUpdated: annUpdated,
+  } = useAnnouncements(eventId);
+
+  // --- 地図のための動的データ追加 ---
+  const { buildings, loading: bldLoading } = useBuildings(eventId);
+  const [selectedBuildingId, setSelectedBuildingId] = useState<string | null>(null);
+  const { floorMaps, loading: fmLoading } = useFloorMaps(selectedBuildingId);
+  const [selectedFloorMapId, setSelectedFloorMapId] = useState<string | null>(null);
+  const { ocrResult, loading: ocrLoading } = useOcrResult(selectedFloorMapId);
+
+  // 建物が変わったら最初の階を選択
+  useEffect(() => {
+    if (floorMaps.length > 0) {
+      setSelectedFloorMapId(floorMaps[0].id);
+    } else {
+      setSelectedFloorMapId(null);
+    }
+  }, [floorMaps]);
+
+  const loading = evLoading || locLoading || annLoading || bldLoading;
+  const error = evError || locError || annError;
+
+  // 最新の更新時刻
+  const lastUpdated = useMemo(() => {
+    if (!locUpdated && !annUpdated) return null;
+    if (!locUpdated) return annUpdated;
+    if (!annUpdated) return locUpdated;
+    return locUpdated > annUpdated ? locUpdated : annUpdated;
+  }, [locUpdated, annUpdated]);
+
+  // --------------- 状態管理 ---------------
+  const [selectedLocation, setSelectedLocation] = useState<Location | null>(
+    null
+  );
+  const [searchQuery, setSearchQuery] = useState("");
+  const [activeCategories, setActiveCategories] = useState<CategoryId[]>([]);
+
+  // スマホ向け: ピンを選択したときに詳細パネルへ自動スクロール
+  const detailPanelRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    // 選択された場合、少しの遅延（パネルの再レンダリング待ち）を入れてスクロール
+    if (selectedLocation && detailPanelRef.current) {
+      setTimeout(() => {
+        // lg(1024px)未満の画面幅（縦並びレイアウト時）のみスクロール
+        if (window.innerWidth < 1024) {
+          const element = detailPanelRef.current;
+          if (element) {
+            // 要素の現在位置 + 現在のスクロール量 - 上部のゆとり(24px)
+            const top = element.getBoundingClientRect().top + window.scrollY - 24;
+            window.scrollTo({
+              top,
+              behavior: "smooth",
+            });
+          }
+        }
+      }, 100); // レンダリング後のレイアウトシフトに間に合わせるため少し長めに待機
+    }
+  }, [selectedLocation]);
+
+  // --------------- フィルタ ---------------
+  const filteredLocations = useMemo(() => {
+    return allLocations.filter((loc) => {
+      if (
+        activeCategories.length > 0 &&
+        !activeCategories.includes(loc.category)
+      )
+        return false;
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase();
+        return (
+          loc.name.toLowerCase().includes(q) ||
+          loc.shortName.toLowerCase().includes(q)
+        );
+      }
+      return true;
+    });
+  }, [allLocations, searchQuery, activeCategories]);
+
+  // --------------- コールバック ---------------
+  const handleToggleCategory = useCallback((id: CategoryId) => {
+    setActiveCategories((prev) =>
+      prev.includes(id) ? prev.filter((c) => c !== id) : [...prev, id]
+    );
+  }, []);
+
+  const handleSelectLocation = useCallback((loc: Location) => {
+    setSelectedLocation((prev) => (prev?.id === loc.id ? null : loc));
+  }, []);
+
+  // --------------- ローディング / エラー ---------------
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="text-center">
+          <div className="mx-auto mb-3 h-8 w-8 animate-spin rounded-full border-2 border-gray-300 border-t-gray-600" />
+          <p className="text-sm text-gray-500">データを読み込み中...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="rounded-lg border border-red-200 bg-red-50 px-6 py-4 text-center">
+          <p className="text-sm font-medium text-red-800">{error}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="mt-2 text-xs text-red-600 underline"
+          >
+            再読み込み
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mx-auto min-h-screen max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+      <FirstViewModal />
+      {/* ============ ヘッダー ============ */}
+      <header className="mb-6">
+        <div className="flex items-baseline justify-between">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight text-gray-900">
+              高専祭 2026
+            </h1>
+            <p className="mt-1 text-sm text-gray-500">
+              教室・受付・出し物情報を地図から確認できます
+            </p>
+          </div>
+          {lastUpdated && (
+            <div className="flex items-center gap-1.5 text-xs text-gray-400">
+              <span className="inline-block h-1.5 w-1.5 rounded-full bg-green-400 animate-pulse" />
+              <span>
+                最終更新{" "}
+                {lastUpdated.toLocaleTimeString("ja-JP", {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                  second: "2-digit",
+                })}
+              </span>
+            </div>
+          )}
+        </div>
+      </header>
+
+      {/* ============ お知らせ ============ */}
+      <section className="mb-5" aria-label="お知らせ">
+        <Announcements announcements={announcements} />
+      </section>
+
+      {/* ============ 検索・絞り込み ============ */}
+      <section className="mb-5" aria-label="検索・絞り込み">
+        <SearchFilter
+          query={searchQuery}
+          onQueryChange={setSearchQuery}
+          categories={categories}
+          activeCategories={activeCategories}
+          onToggleCategory={handleToggleCategory}
+        />
+      </section>
+
+      {/* ============ メイン: 地図 + 詳細 ============ */}
+      <section className="grid gap-5 lg:grid-cols-[2fr_1fr]" aria-label="地図と詳細">
+        <div className="flex flex-col gap-3">
+          {/* 建物・フロア選択（動的マップ用） */}
+          {buildings.length > 0 && (
+            <div className="flex flex-wrap items-center gap-3 bg-white p-3 rounded-xl border border-gray-200 shadow-sm transition-all animate-in fade-in slide-in-from-top-2">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold text-gray-500">表示対象:</span>
+                <select
+                  title="Building Selector"
+                  className="text-sm font-medium border-none bg-gray-50 rounded-lg px-3 py-1.5 outline-none ring-1 ring-gray-200 focus:ring-emerald-500 transition-all cursor-pointer"
+                  value={selectedBuildingId ?? ""}
+                  onChange={(e) => setSelectedBuildingId(e.target.value || null)}
+                >
+                  <option value="">🏫 キャンパスマップ (全体)</option>
+                  {buildings.map((b: Building) => (
+                    <option key={b.id} value={b.id}>{b.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              {selectedBuildingId && (
+                <div className="flex items-center gap-2 border-l pl-3 border-gray-100">
+                  <span className="text-xs font-bold text-gray-500">フロア:</span>
+                  <div className="flex gap-1.5">
+                    {floorMaps.length > 0 ? (
+                      floorMaps.map((fm: FloorMap) => (
+                        <button
+                          key={fm.id}
+                          onClick={() => setSelectedFloorMapId(fm.id)}
+                          className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${selectedFloorMapId === fm.id
+                              ? "bg-emerald-600 text-white shadow-md ring-2 ring-emerald-600 ring-offset-1"
+                              : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                            }`}
+                        >
+                          {fm.floorNumber}F
+                        </button>
+                      ))
+                    ) : (
+                      <span className="text-[10px] text-gray-400 italic">マップ未登録</span>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {selectedBuildingId && (
+                <button
+                  onClick={() => setSelectedBuildingId(null)}
+                  className="ml-auto flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 transition-colors"
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M11 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+                  <span>全体図に戻る</span>
+                </button>
+              )}
+
+              {ocrLoading && (
+                <div className="flex items-center gap-1.5 ml-auto text-emerald-600">
+                  <div className="w-3 h-3 border-2 border-emerald-600 border-t-transparent animate-spin rounded-full"></div>
+                  <span className="text-[10px] font-bold">OCR解析中...</span>
+                </div>
+              )}
+            </div>
+          )}
+
+          <div className="aspect-[4/3] lg:aspect-auto lg:min-h-[480px]">
+            <EventMap
+              locations={filteredLocations}
+              buildings={buildings}
+              ocrResult={ocrResult}
+              selectedId={selectedLocation?.id ?? null}
+              onSelectLocation={handleSelectLocation}
+              onSelectBuilding={setSelectedBuildingId}
+              selectedBuildingId={selectedBuildingId}
+            />
+          </div>
+        </div>
+        <div ref={detailPanelRef} className="lg:sticky lg:top-6 lg:self-start scroll-mt-6">
+          <DetailPanel location={selectedLocation} />
+        </div>
+      </section>
+
+      {/* ============ フッター ============ */}
+      <footer className="mt-8 border-t border-gray-100 pt-4 text-center text-xs text-gray-400">
+        © 2026 高専祭実行委員会 — マップ型情報共有システム
+      </footer>
+    </div>
+  );
+}
