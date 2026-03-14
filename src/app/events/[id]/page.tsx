@@ -152,6 +152,11 @@ export default function Home() {
     );
   }
 
+  // 現在選択されているフロアマップのオブジェクトを取得
+  const selectedFloorMap = useMemo(() => {
+    return floorMaps.find((fm) => fm.id === selectedFloorMapId) || null;
+  }, [floorMaps, selectedFloorMapId]);
+
   return (
     <div className="mx-auto min-h-screen max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
       <FirstViewModal />
@@ -175,6 +180,7 @@ export default function Home() {
                   hour: "2-digit",
                   minute: "2-digit",
                   second: "2-digit",
+                  hour12: false,
                 })}
               </span>
             </div>
@@ -229,8 +235,8 @@ export default function Home() {
                           key={fm.id}
                           onClick={() => setSelectedFloorMapId(fm.id)}
                           className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${selectedFloorMapId === fm.id
-                              ? "bg-emerald-600 text-white shadow-md ring-2 ring-emerald-600 ring-offset-1"
-                              : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                            ? "bg-emerald-600 text-white shadow-md ring-2 ring-emerald-600 ring-offset-1"
+                            : "bg-gray-100 text-gray-600 hover:bg-gray-200"
                             }`}
                         >
                           {fm.floorNumber}F
@@ -266,6 +272,7 @@ export default function Home() {
             <EventMap
               locations={filteredLocations}
               buildings={buildings}
+              floorMap={selectedFloorMap}
               ocrResult={ocrResult}
               selectedId={selectedLocation?.id ?? null}
               onSelectLocation={handleSelectLocation}
