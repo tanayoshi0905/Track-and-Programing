@@ -1,7 +1,7 @@
 "use client";
 
 import { type Location, type CategoryId } from "@/lib/data";
-import { type Building, type OcrResult } from "@/lib/types";
+import { type Building, type OcrResult, type FloorMap } from "@/lib/types";
 import { useCallback, useRef, useState, useEffect } from "react";
 
 // --------------- カテゴリごとの色 ---------------
@@ -18,6 +18,7 @@ const categoryColors: Record<CategoryId, string> = {
 interface EventMapProps {
   locations: Location[];
   buildings: Building[];
+  floorMap?: FloorMap | null;
   ocrResult: OcrResult | null;
   selectedId: string | null;
   onSelectLocation: (loc: Location) => void;
@@ -28,6 +29,7 @@ interface EventMapProps {
 export function EventMap({
   locations,
   buildings,
+  floorMap,
   ocrResult,
   selectedId,
   onSelectLocation,
@@ -44,8 +46,12 @@ export function EventMap({
   const offsetStart = useRef({ x: 0, y: 0 });
 
   // ---- ホイールズーム ----
+  // ---- ホイールズーム (感度調整) ----
   const handleWheel = (e: React.WheelEvent) => {
-    const delta = e.deltaY > 0 ? 0.9 : 1.1;
+    // 指のかかり方（deltaY）に応じて微細に変化させる
+    // 従来の固定 0.9/1.1 だとトラックパッドで飛びすぎるため、指数関数的に調整
+    const zoomSpeed = 0.001;
+    const delta = Math.exp(-e.deltaY * zoomSpeed);
     const newScale = Math.min(Math.max(scale * delta, 0.5), 5);
     setScale(newScale);
   };
@@ -177,20 +183,36 @@ export function EventMap({
       {/* SVG マップ */}
       <svg
         ref={svgRef}
-        viewBox="0 0 100 90"
+        viewBox="0 0 100 100"
         className="h-full w-full"
         style={{
           transform: `translate(${offset.x}px, ${offset.y}px) scale(${scale})`,
           transformOrigin: "center center",
         }}
       >
-        {/* グリッド線 */}
-        <defs>
-          <pattern id="grid" width="10" height="10" patternUnits="userSpaceOnUse">
-            <path d="M 10 0 L 0 0 0 10" fill="none" stroke="#e5e7eb" strokeWidth="0.15" />
-          </pattern>
-        </defs>
-        <rect width="100" height="90" fill="url(#grid)" />
+        {/* 背景画像 (不要とのことなのでコメントアウト) */}
+        {/* 
+        {floorMap && (
+          <image
+            href={floorMap.downloadUrl}
+            x="0"
+            y="0"
+            width="100"
+            height="100"
+            preserveAspectRatio="xMidYMid meet"
+          />
+        )}
+        */}
+
+        {/* 背景のグリッド線 (常に表示) */}
+        <>
+          <defs>
+            <pattern id="grid" width="10" height="10" patternUnits="userSpaceOnUse">
+              <path d="M 10 0 L 0 0 0 10" fill="none" stroke="#e5e7eb" strokeWidth="0.15" />
+            </pattern>
+          </defs>
+          <rect width="100" height="100" fill="url(#grid)" />
+        </>
 
         {/* 通路 */}
         <line x1="24" y1="35" x2="24" y2="40" stroke="#d1d5db" strokeWidth="2" strokeLinecap="round" />
@@ -199,26 +221,26 @@ export function EventMap({
 
         {/* OCRに基づく部屋/教室の描画 */}
         {ocrResult && ocrResult.roomCandidates.map((room, idx) => (
-          <g key={`ocr-${idx}`}>
+          <g key={`ocr-${idx}`} className="group/room">
             <rect
-              x={room.x}
-              y={room.y}
+              x={room.x - room.width / 2}
+              y={room.y - room.height / 2}
               width={room.width}
               height={room.height}
-              rx="0.5"
-              fill="white"
-              stroke="#cbd5e1"
-              strokeWidth="0.2"
-              className="opacity-80"
+              rx="0.2"
+              fill="rgba(16, 185, 129, 0.05)"
+              stroke="rgba(16, 185, 129, 0.3)"
+              strokeWidth="0.1"
+              className="transition-colors group-hover/room:fill-[rgba(16,185,129,0.1)] group-hover/room:stroke-emerald-500"
             />
             <text
-              x={room.x + room.width / 2}
-              y={room.y + room.height / 2}
+              x={room.x}
+              y={room.y}
               textAnchor="middle"
               dominantBaseline="central"
-              className="pointer-events-none select-none fill-gray-500"
-              fontSize="2"
-              fontWeight="500"
+              className="pointer-events-none select-none fill-emerald-900 drop-shadow-[0_1px_1px_rgba(255,255,255,0.8)]"
+              fontSize="1.2"
+              fontWeight="700"
             >
               {room.name}
             </text>
