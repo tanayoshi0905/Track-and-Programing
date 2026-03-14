@@ -31,10 +31,10 @@ export default function NoticesPage() {
                     <p className="text-gray-500 text-sm py-4">現在お知らせはありません</p>
                 ) : (
                     announcements.map((announcement) => (
-                        <Link key={announcement.id} href={`/notices/${announcement.id}`} className="block p-5 rounded-2xl border hover:border-orange-300 hover:shadow-md transition-all bg-white relative overflow-hidden group">
-                            <div className={`absolute top-0 left-0 w-1 h-full transition-colors ${announcement.type === '重要' ? 'bg-orange-400 group-hover:bg-orange-500' : announcement.type === '変更' ? 'bg-red-400 group-hover:bg-red-500' : 'bg-blue-400 group-hover:bg-blue-500'}`}></div>
+                        <Link key={announcement.id} href={`/notices/${announcement.id}`} className={`block p-5 rounded-2xl border hover:shadow-md transition-all bg-white relative overflow-hidden group ${announcement.type === '重要' ? 'hover:border-red-300' : announcement.type === '変更' ? 'hover:border-yellow-300' : 'hover:border-blue-300'}`}>
+                            <div className={`absolute top-0 left-0 w-1 h-full transition-colors ${announcement.type === '重要' ? 'bg-red-500 group-hover:bg-red-600' : announcement.type === '変更' ? 'bg-yellow-500 group-hover:bg-yellow-600' : 'bg-blue-500 group-hover:bg-blue-600'}`}></div>
                             <div className="flex flex-col sm:flex-row sm:items-baseline gap-2 mb-2 pl-3">
-                                <span className={`text-xs font-bold px-2 py-1 rounded-md w-fit ${announcement.type === '重要' ? 'bg-orange-100 text-orange-800' : announcement.type === '変更' ? 'bg-red-100 text-red-800' : 'bg-blue-100 text-blue-800'}`}>
+                                <span className={`text-xs font-bold px-2 py-1 rounded-md w-fit ${announcement.type === '重要' ? 'bg-red-100 text-red-800' : announcement.type === '変更' ? 'bg-yellow-200 text-yellow-800' : 'bg-blue-100 text-blue-800'}`}>
                                     {announcement.type}
                                 </span>
                                 <time className="text-sm text-gray-500">{announcement.timestamp}</time>
