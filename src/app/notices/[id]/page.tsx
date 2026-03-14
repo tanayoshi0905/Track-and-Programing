@@ -36,7 +36,7 @@ export default function NoticeDetailPage({ params }: { params: Promise<{ id: str
         <div className="mx-auto min-h-screen max-w-3xl px-4 py-8 sm:px-6 lg:px-8">
             <header className="mb-8 pb-6 border-b">
                 <div className="flex items-center gap-3 mb-4">
-                    <span className={`text-xs font-bold px-2 py-1 rounded-md ${announcement.type === '重要' ? 'bg-orange-100 text-orange-800' : announcement.type === '変更' ? 'bg-red-100 text-red-800' : 'bg-blue-100 text-blue-800'}`}>
+                    <span className={`text-xs font-bold px-2 py-1 rounded-md ${announcement.type === '重要' ? 'bg-red-100 text-red-800' : announcement.type === '変更' ? 'bg-yellow-200 text-yellow-800' : 'bg-blue-100 text-blue-800'}`}>
                         {announcement.type}
                     </span>
                     <time className="text-sm text-gray-500">{announcement.timestamp}</time>
